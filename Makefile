@@ -15,6 +15,9 @@ TEST_PACKAGES      := $(shell go list ./... | grep -v vendor | grep -v fakes)
 .PHONY: help
 .DEFAULT_GOAL := help
 
+start:
+	docker compose -p proxy -f ./.devcontainer/docker-compose.yaml up
+
 # Under the hood, `go test -tags ...` also runs the "default" (unit) test case
 # in addition to the specified tags
 test: installdeps test/integration ## Perform both unit and integration tests
