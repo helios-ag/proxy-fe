@@ -1,0 +1,36 @@
+name: 'proxy'
+
+services:
+  proxy-dev:
+    image: proxy-dev:0.1
+    build: ..
+    container_name: proxy-dev
+    hostname: proxy-dev.local
+    working_dir: /work
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/work
+    depends_on:
+      - proxy-service-db
+    command: sleep infinity
+    restart: on-failure
+    networks:
+      proxy:
+
+  proxy-service-db:
+    image: redis:latest
+    container_name: proxy-service-db
+    hostname: proxy-service-db.local
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6380:6379"
+    networks:
+      proxy:
+
+networks:
+  proxy:
