@@ -33,8 +33,9 @@ func (a *App) Initialize(config *config.Config) {
 func (a *App) setRouters() {
 	a.Get("/articles", a.handleRequest(handler.ArticlesHandler))
 	a.Get("/articles/{id:[0-9]+}", a.handleRequest(handler.ArticleHandler))
-	a.Post("/authors", a.handleRequest(handler.AuthorArticlesHandler))
+	a.Get("/authors", a.handleRequest(handler.AuthorArticlesHandler))
 	a.Post("/captcha", a.handleRequest(handler.CaptchaHandler))
+	a.Post("/track", a.handleRequest(handler.TrackHandler))
 }
 
 func (a *App) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
