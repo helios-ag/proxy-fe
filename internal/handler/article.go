@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"proxy/api"
 	"proxy/internal/config"
+	"proxy/internal/cookies"
 	"proxy/internal/serializer"
 	"proxy/internal/util"
 	"proxy/models"
@@ -28,21 +29,28 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 			util.Error(w, http.StatusBadRequest, "Invalid author ID")
 			return
 		}
-		articles, err := api.FetchArticles(&authorId)
+		article, err := api.FetchArticlesByAuthor(authorId)
 		if err != nil {
 			util.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		util.JSON(w, http.StatusOK, articles)
+		util.JSON(w, http.StatusOK, *article)
 	}
 
-	hasUuid := r.URL.Query().Has("uuid")
-	if hasUuid {
-		uuid := r.URL.Query().Get("uuid")
-		if uuid == "" {
-			util.Error(w, http.StatusNotFound, "Missing uuid")
-		}
+	uuid, err := cookies.Read(r, "userId")
+	if uuid == "" {
+		util.Error(w, http.StatusNotFound, "Missing uuid")
+		return
+	}
+
+	if err == nil {
+		log.Printf("got uuid: %s", uuid)
+
 		viewedPagesIds, _ := rdb.SMembers(context.TODO(), fmt.Sprintf("user:%s:articles", uuid)).Result()
+		if len(viewedPagesIds) == 0 {
+			util.Error(w, http.StatusNotFound, "Articles not found")
+			return
+		}
 		articles := make([]models.Article, len(viewedPagesIds))
 		for i, viewedPageId := range viewedPagesIds {
 			id, _ := strconv.Atoi(viewedPageId)
@@ -50,8 +58,15 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 			articles[i] = *article
 		}
 		util.JSON(w, http.StatusOK, articles)
+		return
 	}
 
+	articles, err := api.FetchArticles()
+	if err != nil {
+		util.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	util.JSON(w, http.StatusOK, articles)
 }
 
 func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
@@ -60,6 +75,7 @@ func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
 
 	article, found := getCachedArticle(rdb, id)
 	if found {
+		log.Println("Found cached article!")
 		util.JSON(w, http.StatusOK, article)
 		return
 	}

@@ -17,10 +17,12 @@ type RecordRequest struct {
 }
 
 func TrackHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("userId")
-	uuid := util.Uuid()
+	uuid, err := cookies.Read(r, "userId")
 	if err != nil {
-		cookie = &http.Cookie{
+		uuid = util.Uuid()
+	}
+	if err != nil {
+		cookie := &http.Cookie{
 			Name:     "userId",
 			Value:    uuid,
 			HttpOnly: true,
