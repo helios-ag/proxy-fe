@@ -6,6 +6,7 @@ Inside dev container run `go run main.go`
 Api available at `http://localhost:3000`
 
 Available endpoints:
+
 `GET /articles` - will return list of articles, if userId present in cookies, will return viewed articles 
 
 `GET /articles?author=1` - will return list of articles by author with id 1
@@ -14,9 +15,11 @@ Available endpoints:
 
 `GET /authors` - returns list of authors
 
-`POST /track` with payload `{ id: [0-9]+}` - will record 
+`POST /track` with payload `{ id: [0-9]+}` - will record viewed article, endpoint protected with rate limiter and google recaptcha
 
-Check `internal/app.go` for some details, like 
+Check `internal/app.go` for some details, like cache time, recaptcha key and etc
+
+
 
 TODO:
 
