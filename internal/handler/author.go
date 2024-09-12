@@ -17,8 +17,8 @@ func AuthorArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Req
 	authors := getCachedAuthorsList(rdb)
 	if authors != nil {
 		util.JSON(w, http.StatusOK, authors)
+		return
 	}
-
 	util.Error(w, http.StatusInternalServerError, "Error fetching authors")
 }
 

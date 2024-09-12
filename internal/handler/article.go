@@ -35,6 +35,7 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		util.JSON(w, http.StatusOK, articles)
+		return
 	}
 
 	uuid, err := cookies.Read(r, "userId")
@@ -83,6 +84,7 @@ func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
 	article, err = api.FetchArticle(id)
 	if err == nil {
 		util.JSON(w, http.StatusOK, article)
+		return
 	}
 
 	util.Error(w, http.StatusInternalServerError, "Failed to fetch articles")
