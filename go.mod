@@ -4,10 +4,12 @@ go 1.23.0
 
 require (
 	github.com/MicahParks/recaptcha v0.0.5
+	github.com/dpapathanasiou/go-recaptcha v0.0.0-20190121160230-be5090b17804
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redis/redismock/v8 v8.11.5
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	golang.org/x/time v0.6.0
 )
 
 require (
