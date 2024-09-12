@@ -29,12 +29,12 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 			util.Error(w, http.StatusBadRequest, "Invalid author ID")
 			return
 		}
-		article, err := api.FetchArticlesByAuthor(authorId)
+		articles, err := getAuthorCachedArticles(rdb, authorId)
 		if err != nil {
 			util.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		util.JSON(w, http.StatusOK, *article)
+		util.JSON(w, http.StatusOK, articles)
 	}
 
 	uuid, err := cookies.Read(r, "userId")
@@ -73,14 +73,14 @@ func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
 
-	article, found := getCachedArticle(rdb, id)
-	if found {
+	article, err := getCachedArticle(rdb, id)
+	if err != nil {
 		log.Println("Found cached article!")
 		util.JSON(w, http.StatusOK, article)
 		return
 	}
 
-	article, err := api.FetchArticle(id)
+	article, err = api.FetchArticle(id)
 	if err == nil {
 		util.JSON(w, http.StatusOK, article)
 	}
@@ -88,23 +88,23 @@ func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
 	util.Error(w, http.StatusInternalServerError, "Failed to fetch articles")
 }
 
-func getCachedArticle(rdb *redis.Client, id int) (*models.Article, bool) {
+func getCachedArticle(rdb *redis.Client, id int) (*models.Article, error) {
 	articleStr, err := rdb.Get(context.TODO(), strconv.Itoa(id)).Result()
 	if errors.Is(err, redis.Nil) {
 		fetchedArticle, err := api.FetchArticle(id)
 		if err != nil {
 			log.Printf("Failed to fetch article: %v", err)
-			return nil, false
+			return nil, err
 		}
 		setCachedArticle(rdb, id, *fetchedArticle)
-		return fetchedArticle, true
+		return fetchedArticle, nil
 	} else if err != nil {
 		log.Println("Error fetching from Redis:", err)
-		return nil, false
+		return nil, err
 	}
 	article := &models.Article{}
 	err = serializer.DeserializeFromString(articleStr, article)
-	return article, true
+	return article, nil
 }
 
 func setCachedArticle(rdb *redis.Client, id int, article models.Article) {
@@ -113,6 +113,36 @@ func setCachedArticle(rdb *redis.Client, id int, article models.Article) {
 		log.Printf("Failed to serialize article: %v", err)
 	}
 	err = rdb.Set(context.TODO(), strconv.Itoa(id), articleString, config.DetailedArticledCache).Err()
+	if err != nil {
+		log.Println("Error setting Redis cache:", err)
+	}
+}
+
+func getAuthorCachedArticles(rdb *redis.Client, authorId int) ([]models.Article, error) {
+	articleStrings, err := rdb.Get(context.TODO(), "articles:"+strconv.Itoa(authorId)).Result()
+	if errors.Is(err, redis.Nil) {
+		fetchedArticles, err := api.FetchArticlesByAuthor(authorId)
+		if err != nil {
+			log.Printf("Failed to fetch article: %v", err)
+			return nil, err
+		}
+		setAuthorCachedArticle(rdb, authorId, fetchedArticles)
+		return fetchedArticles, nil
+	} else if err != nil {
+		log.Println("Error fetching from Redis:", err)
+		return nil, err
+	}
+	var articles []models.Article
+	err = serializer.DeserializeFromString(articleStrings, articles)
+	return articles, nil
+}
+
+func setAuthorCachedArticle(rdb *redis.Client, id int, articles []models.Article) {
+	articlesStrings, err := serializer.SerializeToString(articles)
+	if err != nil {
+		log.Printf("Failed to serialize articles: %v", err)
+	}
+	err = rdb.Set(context.TODO(), "articles:"+strconv.Itoa(id), articlesStrings, config.CacheAuthorArticles).Err()
 	if err != nil {
 		log.Println("Error setting Redis cache:", err)
 	}

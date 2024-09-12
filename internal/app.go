@@ -16,9 +16,11 @@ import (
 )
 
 const (
+	// Public key for recapthca must be set on frontend
 	recaptchaSecretKey = "your-recaptcha-secret-key"
-	limit              = 1
-	burst              = 10
+	// values used
+	limit = 1
+	burst = 10
 )
 
 var limiter = rate.NewLimiter(limit, burst)
@@ -47,7 +49,6 @@ func (a *App) setRouters() {
 	a.Get("/articles", a.handleRequest(handler.ArticlesHandler))
 	a.Get("/articles/{id:[0-9]+}", a.handleRequest(handler.ArticleHandler))
 	a.Get("/authors", a.handleRequest(handler.AuthorArticlesHandler))
-	a.Post("/captcha", a.handleRequest(handler.CaptchaHandler))
 	a.Post("/track", a.handleRequest(rateLimitMiddleware(handler.TrackHandler)))
 }
 

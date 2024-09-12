@@ -14,38 +14,16 @@ const (
 
 func FetchArticles() ([]models.Article, error) {
 	url := posts
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var articles []models.Article
-	err = json.Unmarshal(body, &articles)
-	if err != nil {
-		return nil, err
-	}
-
-	return articles, nil
+	return fetchArticlesFromURL(url)
 }
 
-func FetchArticlesByAuthor(authorId int) (*models.Article, error) {
+func FetchArticlesByAuthor(authorId int) ([]models.Article, error) {
 	url := posts + "?userId=" + strconv.Itoa(authorId)
-	return fetchArticleFromURL(url)
+	return fetchArticlesFromURL(url)
 }
 
 func FetchArticle(id int) (*models.Article, error) {
 	url := posts + "/" + strconv.FormatUint(uint64(id), 10)
-	return fetchArticleFromURL(url)
-}
-
-func fetchArticleFromURL(url string) (*models.Article, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -64,4 +42,25 @@ func fetchArticleFromURL(url string) (*models.Article, error) {
 	}
 
 	return &article, nil
+}
+
+func fetchArticlesFromURL(url string) ([]models.Article, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var articles []models.Article
+	err = json.Unmarshal(body, &articles)
+	if err != nil {
+		return nil, err
+	}
+
+	return articles, nil
 }
