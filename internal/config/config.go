@@ -6,6 +6,8 @@ const (
 	CacheAuthorArticles   = 2 * time.Minute
 	DetailedArticledCache = 5 * time.Minute
 	CacheAuthorsList      = 5 * time.Minute
+	UsersURL              = "https://jsonplaceholder.typicode.com/users"
+	PostsURL              = "https://jsonplaceholder.typicode.com/posts"
 )
 
 type Config struct {

@@ -11,9 +11,9 @@ import (
 	"proxy/api"
 	"proxy/internal/config"
 	"proxy/internal/cookies"
+	"proxy/internal/models"
 	"proxy/internal/serializer"
 	"proxy/internal/util"
-	"proxy/models"
 	"strconv"
 )
 

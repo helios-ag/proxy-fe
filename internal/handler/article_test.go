@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"proxy/internal/handler"
+	"proxy/internal/models"
 	"proxy/internal/serializer"
-	"proxy/models"
 	"strconv"
 	"testing"
 

@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"proxy/api"
 	"proxy/internal/config"
+	"proxy/internal/models"
 	"proxy/internal/serializer"
 	"proxy/internal/util"
-	"proxy/models"
 )
 
 func AuthorArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {

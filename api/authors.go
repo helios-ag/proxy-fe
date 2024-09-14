@@ -4,15 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"proxy/models"
-)
-
-const (
-	users = "https://jsonplaceholder.typicode.com/users"
+	"proxy/internal/config"
+	"proxy/internal/models"
 )
 
 func FetchAuthors() ([]models.Author, error) {
-	resp, err := http.Get(users)
+	resp, err := http.Get(config.UsersURL)
 	if err != nil {
 		return nil, err
 	}

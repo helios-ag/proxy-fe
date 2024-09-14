@@ -4,26 +4,23 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"proxy/models"
+	"proxy/internal/config"
+	"proxy/internal/models"
 	"strconv"
 )
 
-const (
-	posts = "https://jsonplaceholder.typicode.com/posts"
-)
-
 func FetchArticles() ([]models.Article, error) {
-	url := posts
+	url := config.PostsURL
 	return fetchArticlesFromURL(url)
 }
 
 func FetchArticlesByAuthor(authorId int) ([]models.Article, error) {
-	url := posts + "?userId=" + strconv.Itoa(authorId)
+	url := config.PostsURL + "?userId=" + strconv.Itoa(authorId)
 	return fetchArticlesFromURL(url)
 }
 
 func FetchArticle(id int) (*models.Article, error) {
-	url := posts + "/" + strconv.FormatUint(uint64(id), 10)
+	url := config.PostsURL + "/" + strconv.FormatUint(uint64(id), 10)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
