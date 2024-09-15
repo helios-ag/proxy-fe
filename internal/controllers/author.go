@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"context"
@@ -13,8 +13,16 @@ import (
 	"proxy/internal/util"
 )
 
-func AuthorArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
-	authors := getCachedAuthorsList(rdb)
+func NewAuthorArticlesHandler(rdb *redis.Client) *AuthorArticlesHandler {
+	return &AuthorArticlesHandler{rdb}
+}
+
+type AuthorArticlesHandler struct {
+	rdb *redis.Client
+}
+
+func (aah AuthorArticlesHandler) GetAuthorArticles(w http.ResponseWriter, r *http.Request) {
+	authors := getCachedAuthorsList(aah.rdb)
 	if authors != nil {
 		util.JSON(w, http.StatusOK, authors)
 		return

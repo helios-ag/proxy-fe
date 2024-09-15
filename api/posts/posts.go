@@ -1,26 +1,30 @@
-package api
+package posts
 
 import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"proxy/internal/config"
 	"proxy/internal/models"
 	"strconv"
 )
 
-func FetchArticles() ([]models.Article, error) {
-	url := config.PostsURL
-	return fetchArticlesFromURL(url)
+type Client struct {
+	HttpClient *http.Client
+	PostsUrl   string
 }
 
-func FetchArticlesByAuthor(authorId int) ([]models.Article, error) {
-	url := config.PostsURL + "?userId=" + strconv.Itoa(authorId)
-	return fetchArticlesFromURL(url)
+func (c Client) FetchArticles() ([]models.Article, error) {
+	url := c.PostsUrl
+	return fetchArticlesFromURL(url, c.HttpClient)
 }
 
-func FetchArticle(id int) (*models.Article, error) {
-	url := config.PostsURL + "/" + strconv.FormatUint(uint64(id), 10)
+func (c Client) FetchArticlesByAuthor(authorId int) ([]models.Article, error) {
+	url := c.PostsUrl + "?userId=" + strconv.Itoa(authorId)
+	return fetchArticlesFromURL(url, c.HttpClient)
+}
+
+func (c Client) FetchArticle(id int) (*models.Article, error) {
+	url := c.PostsUrl + "/" + strconv.FormatUint(uint64(id), 10)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -41,7 +45,7 @@ func FetchArticle(id int) (*models.Article, error) {
 	return &article, nil
 }
 
-func fetchArticlesFromURL(url string) ([]models.Article, error) {
+func fetchArticlesFromURL(url string, http *http.Client) ([]models.Article, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"context"
@@ -17,7 +17,15 @@ import (
 	"strconv"
 )
 
-func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
+func NewArticleHandler(rdb *redis.Client) *ArticleHandler {
+	return &ArticleHandler{rdb}
+}
+
+type ArticleHandler struct {
+	rdb *redis.Client
+}
+
+func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Has("author") {
 		authorIdStr := r.URL.Query().Get("author")
 		if authorIdStr == "" {
@@ -29,7 +37,7 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 			util.Error(w, http.StatusBadRequest, "Invalid author ID")
 			return
 		}
-		articles, err := getAuthorCachedArticles(rdb, authorId)
+		articles, err := getAuthorCachedArticles(ah.rdb, authorId)
 		if err != nil {
 			util.Error(w, http.StatusInternalServerError, err.Error())
 			return
@@ -47,7 +55,7 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 	if err == nil {
 		log.Printf("got uuid: %s", uuid)
 
-		viewedPagesIds, _ := rdb.SMembers(context.TODO(), fmt.Sprintf("user:%s:articles", uuid)).Result()
+		viewedPagesIds, _ := ah.rdb.SMembers(context.TODO(), fmt.Sprintf("user:%s:articles", uuid)).Result()
 		if len(viewedPagesIds) == 0 {
 			util.Error(w, http.StatusNotFound, "Articles not found")
 			return
@@ -70,11 +78,11 @@ func ArticlesHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) 
 	util.JSON(w, http.StatusOK, articles)
 }
 
-func ArticleHandler(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
+func (ah ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
 
-	article, err := getCachedArticle(rdb, id)
+	article, err := getCachedArticle(ah.rdb, id)
 	if err != nil {
 		log.Println("Found cached article!")
 		util.JSON(w, http.StatusOK, article)

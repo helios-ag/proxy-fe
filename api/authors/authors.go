@@ -1,15 +1,19 @@
-package api
+package authors
 
 import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"proxy/internal/config"
 	"proxy/internal/models"
 )
 
-func FetchAuthors() ([]models.Author, error) {
-	resp, err := http.Get(config.UsersURL)
+type Client struct {
+	HttpClient *http.Client
+	AuthorsUrl string
+}
+
+func (c Client) FetchAuthors() ([]models.Author, error) {
+	resp, err := c.HttpClient.Get(c.AuthorsUrl)
 	if err != nil {
 		return nil, err
 	}
