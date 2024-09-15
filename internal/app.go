@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"proxy/api/authors"
+	"proxy/api/posts"
 	"proxy/internal/config"
-	"proxy/internal/handler"
+	"proxy/internal/controllers"
 	"proxy/internal/util"
 
 	"github.com/go-redis/redis/v8"
@@ -27,7 +29,7 @@ var limiter = rate.NewLimiter(limit, burst)
 
 type App struct {
 	Router *mux.Router
-	RDB    *redis.Client
+	//RDB    *redis.Client
 }
 
 func (a *App) Initialize(config *config.Config) {
@@ -39,17 +41,27 @@ func (a *App) Initialize(config *config.Config) {
 			config.DB.Port,
 		),
 	})
-
-	a.RDB = rdb
+	//var httpClient http.Client
+	//pc := posts.Client{&httpClient}
+	pc := &posts.Client{
+		HttpClient: &http.Client{},
+		PostsUrl:   config.PostsUrl,
+	}
+	ac := &authors.Client{
+		HttpClient: &http.Client{},
+		AuthorsUrl: config.UsersUrl,
+	}
 	a.Router = mux.NewRouter()
-	a.setRouters()
+	var hf *controllers.ControllerFactory
+	hf = controllers.NewControllerFactory(rdb, *pc, *ac)
+	a.setRouters(hf)
 }
 
-func (a *App) setRouters() {
-	a.Get("/articles", a.handleRequest(handler.ArticlesHandler))
-	a.Get("/articles/{id:[0-9]+}", a.handleRequest(handler.ArticleHandler))
-	a.Get("/authors", a.handleRequest(handler.AuthorArticlesHandler))
-	a.Post("/track", a.handleRequest(rateLimitMiddleware(handler.TrackHandler)))
+func (a *App) setRouters(hf *controllers.ControllerFactory) {
+	a.Get("/articles", a.handleRequest(hf.GetArticleController().GetArticles))
+	a.Get("/articles/{id:[0-9]+}", a.handleRequest(hf.GetArticleController().GetArticle))
+	a.Get("/authors", a.handleRequest(hf.GetAuthorArticlesController().GetAuthorArticles))
+	a.Post("/track", a.handleRequest(rateLimitMiddleware(hf.GetTrackController().PostTrack)))
 }
 
 func (a *App) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
@@ -64,26 +76,26 @@ func (a *App) Run(host string) {
 	log.Fatal(http.ListenAndServe(host, a.Router))
 }
 
-type RequestHandlerFunction func(rdb *redis.Client, w http.ResponseWriter, r *http.Request)
+type RequestHandlerFunction func(w http.ResponseWriter, r *http.Request)
 
 func (a *App) handleRequest(handler RequestHandlerFunction) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handler(a.RDB, w, r)
+		handler(w, r)
 	}
 }
 
 func rateLimitMiddleware(next RequestHandlerFunction) RequestHandlerFunction {
-	return func(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if !limiter.Allow() {
-			recaptchaMiddleware(next)(rdb, w, r)
+			recaptchaMiddleware(next)(w, r)
 			return
 		}
-		next(rdb, w, r)
+		next(w, r)
 	}
 }
 
 func recaptchaMiddleware(next RequestHandlerFunction) RequestHandlerFunction {
-	return func(rdb *redis.Client, w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		recaptchaResponse := r.FormValue("g-recaptcha-response")
 		if recaptchaResponse == "" {
 			util.Error(w, http.StatusBadRequest, "Missing recaptcha-response")
@@ -96,6 +108,6 @@ func recaptchaMiddleware(next RequestHandlerFunction) RequestHandlerFunction {
 			return
 		}
 
-		next(rdb, w, r)
+		next(w, r)
 	}
 }
