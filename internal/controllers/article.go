@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"proxy/api"
+	"proxy/api/posts"
 	"proxy/internal/config"
 	"proxy/internal/cookies"
 	"proxy/internal/models"
@@ -17,15 +17,16 @@ import (
 	"strconv"
 )
 
-func NewArticleHandler(rdb *redis.Client) *ArticleHandler {
-	return &ArticleHandler{rdb}
+func NewArticleController(rdb *redis.Client, client posts.Client) *ArticleController {
+	return &ArticleController{rdb, client}
 }
 
-type ArticleHandler struct {
+type ArticleController struct {
 	rdb *redis.Client
+	c   posts.Client
 }
 
-func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
+func (controller ArticleController) GetArticles(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Has("author") {
 		authorIdStr := r.URL.Query().Get("author")
 		if authorIdStr == "" {
@@ -37,7 +38,7 @@ func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 			util.Error(w, http.StatusBadRequest, "Invalid author ID")
 			return
 		}
-		articles, err := getAuthorCachedArticles(ah.rdb, authorId)
+		articles, err := controller.getAuthorCachedArticles(controller.rdb, authorId)
 		if err != nil {
 			util.Error(w, http.StatusInternalServerError, err.Error())
 			return
@@ -55,7 +56,7 @@ func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		log.Printf("got uuid: %s", uuid)
 
-		viewedPagesIds, _ := ah.rdb.SMembers(context.TODO(), fmt.Sprintf("user:%s:articles", uuid)).Result()
+		viewedPagesIds, _ := controller.rdb.SMembers(context.TODO(), fmt.Sprintf("user:%s:articles", uuid)).Result()
 		if len(viewedPagesIds) == 0 {
 			util.Error(w, http.StatusNotFound, "Articles not found")
 			return
@@ -63,14 +64,14 @@ func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 		articles := make([]models.Article, len(viewedPagesIds))
 		for i, viewedPageId := range viewedPagesIds {
 			id, _ := strconv.Atoi(viewedPageId)
-			article, _ := api.FetchArticle(id)
+			article, _ := controller.c.FetchArticle(id)
 			articles[i] = *article
 		}
 		util.JSON(w, http.StatusOK, articles)
 		return
 	}
 
-	articles, err := api.FetchArticles()
+	articles, err := controller.c.FetchArticles()
 	if err != nil {
 		util.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -78,18 +79,18 @@ func (ah ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 	util.JSON(w, http.StatusOK, articles)
 }
 
-func (ah ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
+func (controller ArticleController) GetArticle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
 
-	article, err := getCachedArticle(ah.rdb, id)
+	article, err := controller.getCachedArticle(controller.rdb, id)
 	if err != nil {
 		log.Println("Found cached article!")
 		util.JSON(w, http.StatusOK, article)
 		return
 	}
 
-	article, err = api.FetchArticle(id)
+	article, err = controller.c.FetchArticle(id)
 	if err == nil {
 		util.JSON(w, http.StatusOK, article)
 		return
@@ -98,15 +99,15 @@ func (ah ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	util.Error(w, http.StatusInternalServerError, "Failed to fetch articles")
 }
 
-func getCachedArticle(rdb *redis.Client, id int) (*models.Article, error) {
+func (controller ArticleController) getCachedArticle(rdb *redis.Client, id int) (*models.Article, error) {
 	articleStr, err := rdb.Get(context.TODO(), strconv.Itoa(id)).Result()
 	if errors.Is(err, redis.Nil) {
-		fetchedArticle, err := api.FetchArticle(id)
+		fetchedArticle, err := controller.c.FetchArticle(id)
 		if err != nil {
 			log.Printf("Failed to fetch article: %v", err)
 			return nil, err
 		}
-		setCachedArticle(rdb, id, *fetchedArticle)
+		controller.setCachedArticle(rdb, id, *fetchedArticle)
 		return fetchedArticle, nil
 	} else if err != nil {
 		log.Println("Error fetching from Redis:", err)
@@ -117,7 +118,7 @@ func getCachedArticle(rdb *redis.Client, id int) (*models.Article, error) {
 	return article, nil
 }
 
-func setCachedArticle(rdb *redis.Client, id int, article models.Article) {
+func (controller ArticleController) setCachedArticle(rdb *redis.Client, id int, article models.Article) {
 	articleString, err := serializer.SerializeToString(article)
 	if err != nil {
 		log.Printf("Failed to serialize article: %v", err)
@@ -128,15 +129,15 @@ func setCachedArticle(rdb *redis.Client, id int, article models.Article) {
 	}
 }
 
-func getAuthorCachedArticles(rdb *redis.Client, authorId int) ([]models.Article, error) {
+func (controller ArticleController) getAuthorCachedArticles(rdb *redis.Client, authorId int) ([]models.Article, error) {
 	articleStrings, err := rdb.Get(context.TODO(), "articles:"+strconv.Itoa(authorId)).Result()
 	if errors.Is(err, redis.Nil) {
-		fetchedArticles, err := api.FetchArticlesByAuthor(authorId)
+		fetchedArticles, err := controller.c.FetchArticlesByAuthor(authorId)
 		if err != nil {
 			log.Printf("Failed to fetch article: %v", err)
 			return nil, err
 		}
-		setAuthorCachedArticle(rdb, authorId, fetchedArticles)
+		controller.setAuthorCachedArticle(rdb, authorId, fetchedArticles)
 		return fetchedArticles, nil
 	} else if err != nil {
 		log.Println("Error fetching from Redis:", err)
@@ -147,7 +148,7 @@ func getAuthorCachedArticles(rdb *redis.Client, authorId int) ([]models.Article,
 	return articles, nil
 }
 
-func setAuthorCachedArticle(rdb *redis.Client, id int, articles []models.Article) {
+func (controller ArticleController) setAuthorCachedArticle(rdb *redis.Client, id int, articles []models.Article) {
 	articlesStrings, err := serializer.SerializeToString(articles)
 	if err != nil {
 		log.Printf("Failed to serialize articles: %v", err)

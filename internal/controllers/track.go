@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"context"
@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-func NewTrackHandler(rdb *redis.Client) *TrackHandler {
-	return &TrackHandler{rdb}
+func NewTrackController(rdb *redis.Client) *TrackController {
+	return &TrackController{rdb}
 }
 
-type TrackHandler struct {
+type TrackController struct {
 	rdb *redis.Client
 }
 
@@ -24,7 +24,7 @@ type RecordRequest struct {
 	ID int `json:"id"`
 }
 
-func (th TrackHandler) PostTrack(w http.ResponseWriter, r *http.Request) {
+func (controller TrackController) PostTrack(w http.ResponseWriter, r *http.Request) {
 	uuid, err := cookies.Read(r, "userId")
 	if err != nil {
 		uuid = util.Uuid()
@@ -53,7 +53,7 @@ func (th TrackHandler) PostTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	th.rdb.SAdd(context.TODO(), fmt.Sprintf("user:%s:articles", uuid), request.ID)
+	controller.rdb.SAdd(context.TODO(), fmt.Sprintf("user:%s:articles", uuid), request.ID)
 
 	w.WriteHeader(http.StatusCreated)
 }

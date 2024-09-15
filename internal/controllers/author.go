@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"context"
@@ -6,31 +6,32 @@ import (
 	"github.com/go-redis/redis/v8"
 	"log"
 	"net/http"
-	"proxy/api"
+	"proxy/api/authors"
 	"proxy/internal/config"
 	"proxy/internal/models"
 	"proxy/internal/serializer"
 	"proxy/internal/util"
 )
 
-func NewAuthorArticlesHandler(rdb *redis.Client) *AuthorArticlesHandler {
-	return &AuthorArticlesHandler{rdb}
+func NewAuthorArticlesController(rdb *redis.Client, client authors.Client) *AuthorArticlesController {
+	return &AuthorArticlesController{rdb, client}
 }
 
-type AuthorArticlesHandler struct {
+type AuthorArticlesController struct {
 	rdb *redis.Client
+	c   authors.Client
 }
 
-func (aah AuthorArticlesHandler) GetAuthorArticles(w http.ResponseWriter, r *http.Request) {
-	authors := getCachedAuthorsList(aah.rdb)
-	if authors != nil {
-		util.JSON(w, http.StatusOK, authors)
+func (controller AuthorArticlesController) GetAuthorArticles(w http.ResponseWriter, r *http.Request) {
+	authorsList := controller.getCachedAuthorsList(controller.rdb)
+	if authorsList != nil {
+		util.JSON(w, http.StatusOK, authorsList)
 		return
 	}
-	util.Error(w, http.StatusInternalServerError, "Error fetching authors")
+	util.Error(w, http.StatusInternalServerError, "Error fetching authorsList")
 }
 
-func setCachedAuthors(rdb *redis.Client, authors []models.Author) {
+func (controller AuthorArticlesController) setCachedAuthors(rdb *redis.Client, authors []models.Author) {
 	serializedAuthors, err := serializer.SerializeToString(authors)
 	if err != nil {
 		log.Printf("Failed to serialize authors: %v", err)
@@ -41,15 +42,15 @@ func setCachedAuthors(rdb *redis.Client, authors []models.Author) {
 	}
 }
 
-func getCachedAuthorsList(rdb *redis.Client) []models.Author {
+func (controller AuthorArticlesController) getCachedAuthorsList(rdb *redis.Client) []models.Author {
 	authorsString, err := rdb.Get(context.TODO(), "authors").Result()
 	if errors.Is(err, redis.Nil) {
-		fetchedAuthors, err := api.FetchAuthors()
+		fetchedAuthors, err := controller.c.FetchAuthors()
 		if err != nil {
 			log.Printf("Failed to fetch article: %v", err)
 			return nil
 		}
-		setCachedAuthors(rdb, fetchedAuthors)
+		controller.setCachedAuthors(rdb, fetchedAuthors)
 		return fetchedAuthors
 	} else if err != nil {
 		log.Println("Error fetching from Redis:", err)
