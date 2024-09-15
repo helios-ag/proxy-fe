@@ -11,7 +11,9 @@ const (
 )
 
 type Config struct {
-	DB *DBConfig
+	DB       *DBConfig
+	PostsUrl string
+	UsersUrl string
 }
 
 type DBConfig struct {
@@ -25,5 +27,7 @@ func GetConfig() *Config {
 			Host: "proxy-service-db.local",
 			Port: 6379,
 		},
+		PostsUrl: PostsURL,
+		UsersUrl: UsersURL,
 	}
 }
