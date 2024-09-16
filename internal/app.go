@@ -29,7 +29,6 @@ var limiter = rate.NewLimiter(limit, burst)
 
 type App struct {
 	Router *mux.Router
-	//RDB    *redis.Client
 }
 
 func (a *App) Initialize(config *config.Config) {
@@ -41,8 +40,6 @@ func (a *App) Initialize(config *config.Config) {
 			config.DB.Port,
 		),
 	})
-	//var httpClient http.Client
-	//pc := posts.Client{&httpClient}
 	pc := &posts.Client{
 		HttpClient: &http.Client{},
 		PostsUrl:   config.PostsUrl,
@@ -53,7 +50,7 @@ func (a *App) Initialize(config *config.Config) {
 	}
 	a.Router = mux.NewRouter()
 	var hf *controllers.ControllerFactory
-	hf = controllers.NewControllerFactory(rdb, *pc, *ac)
+	hf = controllers.NewControllerFactory(rdb, pc, ac)
 	a.setRouters(hf)
 }
 
