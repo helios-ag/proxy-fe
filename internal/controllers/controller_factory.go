@@ -8,8 +8,8 @@ import (
 
 type ControllerFactory struct {
 	rdb           *redis.Client
-	postsClient   posts.Client
-	authorsClient authors.Client
+	postsClient   *posts.Client
+	authorsClient *authors.Client
 }
 
 func (cf ControllerFactory) GetArticleController() *ArticleController {
@@ -24,7 +24,7 @@ func (cf ControllerFactory) GetTrackController() *TrackController {
 	return NewTrackController(cf.rdb)
 }
 
-func NewControllerFactory(rdb *redis.Client, pc posts.Client, ac authors.Client) *ControllerFactory {
+func NewControllerFactory(rdb *redis.Client, pc *posts.Client, ac *authors.Client) *ControllerFactory {
 	return &ControllerFactory{
 		rdb:           rdb,
 		postsClient:   pc,

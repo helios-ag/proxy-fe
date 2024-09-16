@@ -17,13 +17,13 @@ import (
 	"strconv"
 )
 
-func NewArticleController(rdb *redis.Client, client posts.Client) *ArticleController {
+func NewArticleController(rdb *redis.Client, client *posts.Client) *ArticleController {
 	return &ArticleController{rdb, client}
 }
 
 type ArticleController struct {
 	rdb *redis.Client
-	c   posts.Client
+	c   *posts.Client
 }
 
 func (controller ArticleController) GetArticles(w http.ResponseWriter, r *http.Request) {
