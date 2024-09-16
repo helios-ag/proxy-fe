@@ -13,13 +13,13 @@ import (
 	"proxy/internal/util"
 )
 
-func NewAuthorArticlesController(rdb *redis.Client, client authors.Client) *AuthorArticlesController {
+func NewAuthorArticlesController(rdb *redis.Client, client *authors.Client) *AuthorArticlesController {
 	return &AuthorArticlesController{rdb, client}
 }
 
 type AuthorArticlesController struct {
 	rdb *redis.Client
-	c   authors.Client
+	c   *authors.Client
 }
 
 func (controller AuthorArticlesController) GetAuthorArticles(w http.ResponseWriter, r *http.Request) {

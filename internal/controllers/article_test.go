@@ -60,7 +60,7 @@ func TestGetArticle(t *testing.T) {
 	serializedArticles, _ := serializer.SerializeToString(article)
 	mock.ExpectGet("articles:1").SetVal(serializedArticles)
 
-	testServer.Mux.HandleFunc("/1", func(w http.ResponseWriter, r *http.Request) {
+	testServer.Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(article)
@@ -68,15 +68,15 @@ func TestGetArticle(t *testing.T) {
 
 	pc := &posts.Client{
 		HttpClient: &http.Client{},
-		PostsUrl:   testServer.URL + "/1",
+		PostsUrl:   testServer.URL,
 	}
 
 	controller := NewArticleController(rdb, pc)
 	req, err := http.NewRequest("GET", "/articles/1", nil)
 	assert.NoError(t, err)
 	rr := httptest.NewRecorder()
-	controller.GetArticles(rr, req)
+	controller.GetArticle(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	mock.ExpectGet("author:123")
+	mock.ExpectGet("articles:1")
 }
