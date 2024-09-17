@@ -49,8 +49,7 @@ func (a *App) Initialize(config *config.Config) {
 		AuthorsUrl: config.UsersUrl,
 	}
 	a.Router = mux.NewRouter()
-	var hf *controllers.ControllerFactory
-	hf = controllers.NewControllerFactory(rdb, pc, ac)
+	hf := controllers.NewControllerFactory(rdb, pc, ac)
 	a.setRouters(hf)
 }
 
