@@ -148,7 +148,7 @@ func (controller ArticleController) getAuthorCachedArticles(rdb *redis.Client, a
 		return nil, err
 	}
 	var articles []models.Article
-	err = serializer.DeserializeFromString(articleStrings, articles)
+	err = serializer.DeserializeFromString(articleStrings, &articles)
 	if err != nil {
 		log.Println("Error deserializing articles:", err)
 		return nil, err
